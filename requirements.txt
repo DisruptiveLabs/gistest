@@ -1,0 +1,5 @@
+flask
+flask-script
+flask-sqlalchemy
+psycopg2
+geoalchemy2

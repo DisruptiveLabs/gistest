@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.css"/>
+  <style>
+    #map {
+      width: 100%;
+      height: 500px;
+    }
+
+    #zips {
+      width: 100px;
+      height: 400px;
+
+    }
+
+    .zip-marker {
+      font-size: 1.3em;
+      text-shadow: 2px 2px white;
+    }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="controls">
+  <select name="zips" id="zips" multiple></select>
+</div>
+<script src="//code.jquery.com/jquery-2.1.4.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.3/leaflet.js"></script>
+<script src="//leaflet-extras.github.io/leaflet-providers/leaflet-providers.js"></script>
+<script type="text/javascript">
+  var map = L.map('map').setView([32.22325762025166, -110.92929840087889], 13),
+      geoJson = L.geoJson().addTo(map),
+      $zips = $("#zips"),
+      _shown_zips = {};
+
+  L.tileLayer.provider('OpenStreetMap.Mapnik').addTo(map);
+
+  map.on('click', function (d) {
+    console.log(d);
+    $.getJSON("/api/which", {
+      lat: d.latlng.lat, lng: d.latlng.lng
+    }).then(handleZipResponse);
+  });
+
+  function handleZipResponse(d) {
+    d.zips.forEach(showZipCode);
+    updateUrlHash()
+  }
+  function updateUrlHash() {
+    document.location.hash = Array.prototype.slice.call($zips[0].options).map(function (i) {
+      return i.value;
+    }).join(",");
+  }
+
+  function showZipCode(z) {
+    if (!(z.zip_code in _shown_zips)) {
+      $zips.append("<option>" + z.zip_code + "</option>");
+      geoJson.addData(z.geo);
+      L.marker([z.lat, z.lng], {
+        clickable: false,
+        icon: L.divIcon({
+          className: 'zip-marker',
+          html: z.zip_code
+        })
+      }).addTo(map);
+      _shown_zips[z.zip_code] = z;
+    }
+  }
+  function showGeoJSON(data) {
+    geoJson
+        .clearLayers()
+        .addData(data);
+  }
+
+  function updateMap() {
+    var zips = Array.prototype.slice.call($zips[0].options)
+        .map(function (i) {
+          return i.value;
+        });
+
+  }
+
+  if (document.location.hash) {
+    var zips = document.location.hash.substr(1).split(",");
+    $.getJSON("/api/locate", {
+      zips: zips
+    }).then(handleZipResponse);
+  }
+</script>
+</body>
+</html>
